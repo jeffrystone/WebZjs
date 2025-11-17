@@ -1,0 +1,32 @@
+{
+  "name": "zec-multisig",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "check:network": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/bs58check": "^2.1.2",
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@bitgo/utxo-lib": "^11.15.0",
+    "@mayaprotocol/zcash-js": "^1.0.7",
+    "@tatumio/tatum": "^4.2.58",
+    "bip32": "^5.0.0",
+    "bip39": "^3.1.0",
+    "bs58check": "^4.0.0",
+    "tiny-secp256k1": "^2.2.4"
+  }
+}

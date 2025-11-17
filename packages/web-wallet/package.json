@@ -15,6 +15,7 @@
     "@chainsafe/webzjs-keys": "workspace:^",
     "@chainsafe/webzjs-wallet": "workspace:^",
     "@metamask/providers": "^18.2.0",
+    "@parcel/rust-win32-x64-msvc": "^2.16.1",
     "classnames": "^2.5.1",
     "decimal.js": "^10.5.0",
     "idb-keyval": "^6.2.1",

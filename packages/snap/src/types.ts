@@ -10,6 +10,23 @@ export type SignPcztParams = {
   };
 };
 
+export type SignTransparentParams = {
+  derivationPath: string;
+  sighashes: string[];
+  details: {
+    toAddress: string;
+    amount: string;
+    network: string;
+  };
+  metadata?: {
+    redeemScript?: string;
+  };
+};
+
+export type TransparentPublicKeyParams = {
+  derivationPath: string;
+};
+
 export interface SnapState extends Record<string, Json> {
   webWalletSyncStartBlock: string;
 }

@@ -30,6 +30,7 @@
   "dependencies": {
     "@chainsafe/webzjs-keys": "0.1.0",
     "@metamask/snaps-sdk": "^6.17.1",
+    "@noble/secp256k1": "^2.1.0",
     "buffer": "^6.0.3",
     "superstruct": "^2.0.2"
   },

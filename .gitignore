@@ -4,6 +4,12 @@ node_modules
 .DS_STORE
 dist
 
+# Environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+
 # Package Manager
 .parcel-cache
 .yarn/*

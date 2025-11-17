@@ -1,54 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Find the wasm_thread directory regardless of the hash
-WASM_THREAD_DIR=$(find packages/webzjs-wallet/snippets -type d -name "wasm_thread-*" | head -n 1)
+set -euo pipefail
 
-if [ -z "$WASM_THREAD_DIR" ]; then
-    echo "Error: Could not find wasm_thread directory"
+SNIPPETS_DIR="packages/webzjs-wallet/snippets"
+WASM_THREAD_DIR=$(find "$SNIPPETS_DIR" -type d -name "wasm_thread-*" | head -n 1 || true)
+
+if [[ -z "$WASM_THREAD_DIR" ]]; then
+    echo "Error: Could not find wasm_thread directory under $SNIPPETS_DIR" >&2
     exit 1
 fi
 
-# Create the directory structure
-mkdir -p "$WASM_THREAD_DIR/src/wasm32/js"
+TARGET_DIR="$WASM_THREAD_DIR/src/wasm32/js"
+TARGET_FILE="$TARGET_DIR/web_worker_module.bundler.js"
 
-# Create the worker module file
-cat > "$WASM_THREAD_DIR/src/wasm32/js/web_worker_module.bundler.js" << 'EOL'
-// synchronously, using the browser, import wasm_bindgen shim JS scripts
+mkdir -p "$TARGET_DIR"
+
+cat > "$TARGET_FILE" <<'EOL'
+// Import the wasm-bindgen shim and the thread entry point from the main package.
 import init, { wasm_thread_entry_point } from "../../../../../";
-// Wait for the main thread to send us the shared module/memory and work context.
-// Once we've got it, initialize it all with the `wasm_bindgen` global we imported via
-// `importScripts`.
-self.onmessage = event => {
-     let [ module, memory, work, thread_key ] = event.data;
-    init(module, memory).catch(err => {
-        console.log(err);
-        const error = new Error(err.message);
-        error.customProperty = "This error right here!";
-        // Propagate to main `onerror`:
-        setTimeout(() => {
-            throw error;
-        });
-        // Rethrow to keep promise rejected and prevent execution of further commands:
+
+// Wait for the main thread to send us the shared module, memory, and work context.
+self.onmessage = (event) => {
+  const [module, memory, worker, _threadKey] = event.data;
+  init(module, memory)
+    .then(() => {
+      wasm_thread_entry_point(worker);
+    })
+    .catch((error) => {
+      console.error("Failed to initialize wasm worker:", error);
+      // Re-throw asynchronously so the main thread can capture the failure.
+      setTimeout(() => {
         throw error;
-    }).then(() => {
-        // Enter rust code by calling entry point defined in `lib.rs`.
-        // This executes closure defined by work context.
-        wasm_thread_entry_point(work);
+      });
+      throw error;
     });
 };
-self.onunhandledrejection = function(e) {
-    console.error('Worker unhandled rejection:', e.reason);
-    throw e.reason;
-};
-self.onerror = function(e) {
-    console.error('Worker error:', e.message);
-    throw e;
+
+self.onunhandledrejection = (event) => {
+  console.error("Worker unhandled rejection:", event.reason);
+  throw event.reason;
 };
 
-self.onended = function(e) {
-    console.error('Worker ended:', e.message);
-    throw e;
-}
+self.onerror = (event) => {
+  console.error("Worker error:", event.message);
+  throw event.error ?? event.message;
+};
 EOL
 
-echo "Added worker module to: $WASM_THREAD_DIR/src/wasm32/js/web_worker_module.bundler.js"
+echo "Added worker module to: $TARGET_FILE"
