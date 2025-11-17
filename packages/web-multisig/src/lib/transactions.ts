@@ -136,8 +136,10 @@ export function buildUnsignedTransaction(
 export function computeInputSighashes(
   txHex: string,
   redeemScript: string,
-  network: ZcashNetwork
+  network: ZcashNetwork,
+  utxos: RpcUtxo[]
 ): string[] {
+  console.log('COMPUTE SIGHASHES', txHex, redeemScript, network, utxos);
   const tx = bitgo.ZcashTransaction.fromBuffer(
     Buffer.from(txHex, "hex"),
     false,
@@ -145,9 +147,17 @@ export function computeInputSighashes(
     NETWORKS_MAP[network]
   );
   const redeemBuffer = Buffer.from(redeemScript, "hex");
-  return tx.ins.map((_, vin) =>
-    tx.hashForSignature(vin, redeemBuffer, Transaction.SIGHASH_ALL).toString("hex")
-  );
+  if (!Array.isArray(utxos) || utxos.length < tx.ins.length) {
+    throw new Error("Недостаточно данных UTXO для расчёта sighash");
+  }
+  return tx.ins.map((_, vin) => {
+    const utxo = utxos[vin];
+    if (!utxo || typeof utxo.amount !== "number") {
+      throw new Error(`UTXO ${vin} не содержит amount`);
+    }
+    const value = Math.round(utxo.amount * ZATOSHI_PER_ZEC);
+    return tx.hashForSignature(vin, redeemBuffer, Transaction.SIGHASH_ALL, value).toString("hex");
+  });
 }
 
 export function finalizeTransactionWithSignatures({

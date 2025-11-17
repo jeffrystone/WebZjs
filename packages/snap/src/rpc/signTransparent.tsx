@@ -3,7 +3,9 @@ import { SignTransparentParams } from '../types';
 import { hexStringToUint8Array } from '../utils/hexStringToUint8Array';
 import { snapConfirm } from '../utils/dialogs';
 import { assert, array, object, optional, string } from 'superstruct';
-import { signSync } from '@noble/secp256k1';
+import { signSync, utils } from '@noble/secp256k1';
+import { hmac } from '@noble/hashes/hmac';
+import { sha256 } from '@noble/hashes/sha256';
 import { ensureDerivationPath, requestPrivateKey, splitDerivationPath } from '../utils/derivation';
 
 const SIGHASH_ALL = 0x01;
@@ -23,7 +25,17 @@ const SignTransparentStruct = object({
   )
 });
 
+function ensureHmacSupport() {
+  if (!utils.hmacSha256Sync) {
+    utils.hmacSha256Sync = (key, ...msgs) => {
+      const message = concatUint8Arrays(msgs);
+      return hmac(sha256, key, message);
+    };
+  }
+}
+
 export async function signTransparent(params: SignTransparentParams, origin: string): Promise<string[]> {
+  ensureHmacSupport();
   assert(params, SignTransparentStruct);
   ensureDerivationPath(params.derivationPath);
 
@@ -67,5 +79,19 @@ function uint8ArrayToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
+  if (arrays.length === 1) {
+    return arrays[0];
+  }
+  const totalLength = arrays.reduce((sum, current) => sum + current.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  arrays.forEach((array) => {
+    result.set(array, offset);
+    offset += array.length;
+  });
+  return result;
 }
 

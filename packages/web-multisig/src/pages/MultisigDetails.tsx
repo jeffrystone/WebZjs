@@ -156,11 +156,23 @@ const MultisigDetails = () => {
   const handleSign = async (tx: MultisigTxRecord, owner: MultisigOwnerInfo) => {
     setActionError(undefined);
     try {
-      const sighashes = computeInputSighashes(tx.initialPsbt, tx.redeemScript, tx.network);
+      console.log('SIGN', tx, owner);
+      const sighashes = computeInputSighashes(tx.initialPsbt, tx.redeemScript, tx.network, tx.utxos);
+      console.log('SIGHASHES', sighashes);
+      const derivationPath =
+        owner.derivationPath && owner.derivationPath.length > 0
+          ? owner.derivationPath
+          : DEFAULT_ZIP48_PATHS[record.network];
+      console.log("SIGN REQUEST", {
+        owner: owner.publicKey,
+        derivationPath,
+        sighashesCount: sighashes.length,
+        tx: tx.initialPsbt.slice(0, 16)
+      });
       const signatures = (await invokeSnap({
         method: "signTransparent",
         params: {
-          derivationPath: owner.derivationPath ?? DEFAULT_ZIP48_PATHS[record.network],
+          derivationPath,
           sighashes,
           details: {
             toAddress: tx.toAddress,
@@ -183,6 +195,7 @@ const MultisigDetails = () => {
       setActionMessage("Подпись сохранена.");
       setRefreshKey((value) => value + 1);
     } catch (err) {
+      console.error("SIGN ERROR", err);
       setActionError(err instanceof Error ? err.message : String(err));
     }
   };
@@ -191,7 +204,7 @@ const MultisigDetails = () => {
     setActionError(undefined);
     setActionMessage(undefined);
     try {
-      const inputCount = computeInputSighashes(tx.initialPsbt, tx.redeemScript, tx.network).length;
+      const inputCount = tx.utxos.length;
       const orderedOwners = [...record.owners].sort((a, b) =>
         Buffer.from(a.publicKey, "hex").compare(Buffer.from(b.publicKey, "hex"))
       );
